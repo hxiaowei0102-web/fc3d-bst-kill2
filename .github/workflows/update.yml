@@ -1,0 +1,79 @@
+name: 福彩3D新版百十个杀2码 自动更新
+
+on:
+  schedule:
+    # 北京时间 22:00 / 23:30 / 01:00 = UTC 14:00 / 15:30 / 17:00
+    - cron: '0 14 * * *'
+    - cron: '30 15 * * *'
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 安装Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 运行更新脚本(多源降级+期号校验)
+        run: python auto_update.py || exit 1
+
+      - name: 检查是否有新数据
+        id: check
+        run: |
+          if git diff --quiet data/fc3d-history.csv && git diff --quiet static/predict.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "无新数据，跳过提交"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "检测到变化(CSV或预测)"
+          fi
+
+      - name: 提交更新
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A data/ static/ || true
+          git commit -m "自动更新$(TZ='Asia/Shanghai' date +%m%d) [skip ci]" || true
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push; then
+              echo "推送成功"
+              break
+            fi
+            echo "第${i}次推送失败，3秒后重试"
+            sleep 3
+          done
+
+      - name: 准备部署文件
+        run: |
+          mkdir -p _site
+          cp static/index.html _site/
+          cp static/predict.json _site/
+
+      - name: 配置Pages
+        uses: actions/configure-pages@v5
+
+      - name: 上传部署产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
+
+      - name: 部署到GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
