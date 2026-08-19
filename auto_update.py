@@ -52,10 +52,9 @@ def _parse_apihz(data):
 
 def _http_get(url):
     from urllib.request import urlopen, Request
-    import ssl
-    ctx = ssl._create_unverified_context()
     req = Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
-    return urlopen(req, timeout=15, context=ctx).read().decode('utf-8', errors='ignore')
+    # 默认 SSL 证书验证（灰鸟/apihz 证书正常，无需关闭验证）
+    return urlopen(req, timeout=15).read().decode('utf-8', errors='ignore')
 
 
 def load_existing_rows():
