@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.workbuddy/
+_flask.log
+/index.html
+search.py
+gen_site.py
+best_combo.json
