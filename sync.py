@@ -55,9 +55,15 @@ def _api(method, url, payload=None, token=None):
 
 
 def cloud_get(path):
-    r = subprocess.run(['curl', '-s', '--max-time', '30', RAW + path], capture_output=True)
-    if r.returncode == 0 and r.stdout:
-        return r.stdout
+    # 用 gh api 走 Contents API（权威、稳定），绕开 raw.githubusercontent.com 间歇空响应
+    r = subprocess.run(
+        ['gh', 'api', f'repos/{OWNER}/{REPO}/contents/{path}', '--jq', '.content'],
+        capture_output=True, text=True)
+    if r.returncode == 0 and r.stdout.strip():
+        try:
+            return base64.b64decode(r.stdout.strip())
+        except Exception:
+            return None
     return None
 
 
