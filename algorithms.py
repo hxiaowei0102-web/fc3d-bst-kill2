@@ -22,6 +22,20 @@ FEAT_NAMES = [
     'sum2', 'sum3', 'sum4',
     'bp', 'gp', 'sp',
     'bo', 'so', 'go', 'So',
+    # === 第二轮扩展特征 ===
+    'mx2', 'mn2', 'md2',      # 大/中/小位平方 mod10
+    'S3', 'P3',               # 和值/跨度立方 mod10
+    'd12', 'd22', 'd32',      # 跨位差平方 mod10
+    'bS', 'sS', 'gS',         # 位置×和值 mod10
+    'bP', 'sP', 'gP',         # 位置×跨度 mod10
+    'bmd', 'smd', 'gmd',      # 位置×中位 mod10
+    'mxmn', 'mxmd', 'mdmn',   # 极值之间差
+    'S9',                     # 和值数字根 (S-1)%9+1
+    'g3f',                    # 组三标志 (b==s or b==g or s==g)  [注: 改名避免与个位立方 g3 重复]
+    'ae',                     # 全偶标志
+    'bL', 'sL', 'gL',         # 各位置 >4
+    'SL',                     # 和值 >=14
+    'PL',                     # 跨度 >=5
 ]
 _IDX = {n: i for i, n in enumerate(FEAT_NAMES)}
 
@@ -40,6 +54,20 @@ def feat_list(b, s, g):
         (b+s) % 10, (s+g) % 10, (b+g) % 10,
         (1 if g == 0 else b**g) % 10, (1 if b == 0 else g**b) % 10, (1 if g == 0 else s**g) % 10,
         b % 2, s % 2, g % 2, S % 2,
+        # === 第二轮扩展特征 ===
+        mx*mx % 10, mn*mn % 10, md*md % 10,
+        S*S*S % 10, P*P*P % 10,
+        (b-s)*(b-s) % 10, (b-g)*(b-g) % 10, (s-g)*(s-g) % 10,
+        b*S % 10, s*S % 10, g*S % 10,
+        b*P % 10, s*P % 10, g*P % 10,
+        b*md % 10, s*md % 10, g*md % 10,
+        mx-mn, mx-md, md-mn,
+        (S-1) % 9 + 1,
+        1 if (b == s or b == g or s == g) else 0,
+        1 if (b % 2 == 0 and s % 2 == 0 and g % 2 == 0) else 0,
+        1 if b > 4 else 0, 1 if s > 4 else 0, 1 if g > 4 else 0,
+        1 if S >= 14 else 0,
+        1 if P >= 5 else 0,
     ]
 
 
