@@ -56,14 +56,13 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 <div class="container">
 <div class="header">
   <h1>福彩3D 百十个位各杀2码</h1>
-  <div class="sub">云端全自动 · 暴力穷举 · 只参考近200期 · 每位置杀2码 · 多套切换</div>
+  <div class="sub">云端全自动 · 暴力穷举 · 只参考近200期 · 每位置杀2码</div>
 </div>
 <div class="banner" id="banner">
   <div class="issue" id="predIssue">加载中...</div>
   <div class="last" id="lastInfo"></div>
   <div class="time" id="updateTime"></div>
 </div>
-<div class="set-tabs" id="setTabs"></div>
 <div class="kill-grid">
   <div class="kill-card"><div class="pos-label">百位杀2码</div><div class="nums"><span class="num" id="kh1">-</span><span class="num" id="kh2">-</span></div></div>
   <div class="kill-card"><div class="pos-label">十位杀2码</div><div class="nums"><span class="num" id="kt1">-</span><span class="num" id="kt2">-</span></div></div>
@@ -104,23 +103,9 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 </div>
 <script>
 var P = null;
-function renderTabs() {
-  var tabs = document.getElementById('setTabs');
-  tabs.innerHTML = '';
-  Object.keys(P.sets).forEach(function(sid) {
-    var v = P.sets[sid];
-    var d = document.createElement('div');
-    d.className = 'set-tab'; d.id = 'tab-' + sid;
-    d.innerHTML = '<span class="t-name">' + v.name + '</span><span class="t-rate">全中 ' + v.s200.all + '%</span>';
-    d.onclick = function() { renderSet(sid); };
-    tabs.appendChild(d);
-  });
-}
-function renderSet(sid) {
-  var v = P.sets[sid];
+function render() {
+  var v = P.sets['1'];
   if (!v) return;
-  document.querySelectorAll('.set-tab').forEach(function(t){ t.classList.remove('active'); });
-  var tab = document.getElementById('tab-' + sid); if (tab) tab.classList.add('active');
   document.getElementById('kh1').textContent = v.kh[0];
   document.getElementById('kh2').textContent = v.kh[1];
   document.getElementById('kt1').textContent = v.kt[0];
@@ -160,13 +145,12 @@ async function load() {
     var resp = await fetch('predict.json?t=' + Date.now(), { cache: 'no-store' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     P = await resp.json();
-    if (!P.sets) throw new Error('数据格式错误');
+    if (!P.sets || !P.sets['1']) throw new Error('数据格式错误');
     document.getElementById('predIssue').textContent = P.next_issue;
     document.getElementById('lastInfo').textContent = '上期 ' + P.last_issue + ' = ' + P.last_draw;
     document.getElementById('updateTime').textContent = '更新 ' + P.updated;
     document.getElementById('dataInfo').textContent = P.data_info.last;
-    renderTabs();
-    renderSet('1');
+    render();
   } catch(e) {
     banner.textContent = '加载失败,点击重试';
     banner.style.cursor = 'pointer';
