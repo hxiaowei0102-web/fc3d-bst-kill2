@@ -8,6 +8,11 @@ on:
     - cron: '0 17 * * *'
   workflow_dispatch:
 
+# 并发保护：三重cron若撞车，取消旧运行，只保留最新一次
+concurrency:
+  group: fc3d-bst-kill2-update
+  cancel-in-progress: true
+
 jobs:
   update:
     runs-on: ubuntu-latest
