@@ -6,3 +6,4 @@ _flask.log
 search.py
 gen_site.py
 best_combo.json
+pool_cache.pkl
