@@ -155,7 +155,7 @@ def main():
 
     sets = {}
     used = set()
-    for sid in (1, 2):
+    for sid in (1,):  # 仅保留系统1（系统2已彻底删除）
         print(f"\n===== 搜索 系统{sid}（排除 {len(used)} 个已用算法）=====")
         combo, rate = search_combo(pool, used)
         used.update(combo['h'] + combo['t'] + combo['o'])
