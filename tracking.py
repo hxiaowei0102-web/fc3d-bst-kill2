@@ -31,8 +31,9 @@ def _now():
     return datetime.now(BJT).strftime('%Y-%m-%d %H:%M:%S')
 
 
-def load_log(path=LOG_PATH):
+def load_log(path=None):
     """返回 {(issue, window): row}，issue 为字符串"""
+    path = path or LOG_PATH
     rows = {}
     if not os.path.exists(path):
         return rows
@@ -43,9 +44,10 @@ def load_log(path=LOG_PATH):
     return rows
 
 
-def append_predictions(entries, path=LOG_PATH):
+def append_predictions(entries, path=None):
     """追加当日预测。entries: [{issue, window, kh, kt, ko, fh, ft, fo}, ...]
     已存在同 (issue, window) 则跳过（防重复运行/防篡改历史）。"""
+    path = path or LOG_PATH
     log = load_log(path)
     new_rows = []
     for e in entries:
@@ -66,9 +68,10 @@ def append_predictions(entries, path=LOG_PATH):
     return len(new_rows)
 
 
-def mark_settled(issues, hh, tt, oo, path=LOG_PATH):
+def mark_settled(issues, hh, tt, oo, path=None):
     """开奖数据推进后，回填所有已开奖的 pending 记录。返回本次回填条数。
     只有 status=pending 且该期号已出现在开奖数据中才会回填；历史预测永不修改。"""
+    path = path or LOG_PATH
     draws = {iss: (h, t, o) for iss, h, t, o in zip(issues, hh, tt, oo)}
     log = load_log(path)
     settled = 0
@@ -90,7 +93,8 @@ def mark_settled(issues, hh, tt, oo, path=LOG_PATH):
     return settled
 
 
-def _write_log(log, path):
+def _write_log(log, path=None):
+    path = path or LOG_PATH
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w', encoding='utf-8', newline='') as f:
         w = csv.writer(f)
