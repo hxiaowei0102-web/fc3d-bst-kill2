@@ -56,8 +56,8 @@ jobs:
           if [ "${{ inputs.force_deploy }}" == "true" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "force_deploy=true: 强制部署"
-          # 以核心产物判断：CSV/公式/实绩/页面任一有变化才算真实更新（无变化时脚本不重写页面，时间戳不会误判）
-          elif git diff --quiet data/fc3d-history.csv && git diff --quiet data/predictions.csv && git diff --quiet best_formula.json && git diff --quiet static/index.html; then
+          # 以核心产物判断：CSV/公式/跟踪/页面任一有变化才算真实更新（无变化时脚本不重写页面，时间戳不会误判）
+          elif git diff --quiet data/fc3d-history.csv && git diff --quiet data/predictions.jsonl && git diff --quiet best_formula.json && git diff --quiet static/index.html; then
             echo "changed=false" >> $GITHUB_OUTPUT
             git checkout -- static/index.html 2>/dev/null || true
             echo "无新数据/无公式变化，跳过提交与部署"
