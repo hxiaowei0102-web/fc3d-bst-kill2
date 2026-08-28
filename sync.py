@@ -24,7 +24,7 @@ FILES = [
     'best_formula.json',
     'bruteforce.py',
     'data/fc3d-history.csv',
-    'data/predictions.csv',
+    'data/predictions.jsonl',
     'engine.py',
     'fetch.py',
     'formulas.py',
