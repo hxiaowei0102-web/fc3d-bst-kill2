@@ -1,152 +1,115 @@
 # -*- coding: utf-8 -*-
 """
-福彩3D 新版百十个杀一码 — 每日预测实绩跟踪（真正的实盘记录）
-============================================================
-核心思想：过去的预测是「当时做出的决定」，开奖后只能回填结果、绝不能篡改。
+福彩3D 新版百十个杀一码 — 每日预测跟踪（真正的样本外记录）
+==========================================================
+核心思想：预测必须在开奖前落盘（杜绝事后编造），开奖后自动回填结果。
+数据文件 data/predictions.jsonl，每行一条：
 
-data/predictions.csv（追加式日志）列：
-  issue    被预测期号（开奖号验证该期）
-  window   窗口（250 / 350）
-  kh,kt,ko 当时预测的三位置杀码（公式变化后历史记录保持不变）
-  fh,ft,fo 当时使用的三条公式名（保留快照，可追溯）
-  r_h,r_t,r_o 回填后的单位置命中（1=杀中,0=杀错,空=未开奖）
-  status   pending(等待开奖) / settled(已回填)
-  updated  记录写入时间(北京)
+  {"issue":"2026230","window":"250","kh":3,"kt":5,"ko":5,
+   "predicted_at":"2026-08-28 18:17","draw":"582",
+   "filled_at":"2026-08-28 22:00","hit":true}
 
-流程（在 auto_update 中调用）：
-  1. append_predictions(): 抓数据+穷举后，把「今天预测的下一期」追加进日志（status=pending）
-  2. mark_settled(): 下次运行抓到新开奖后，把日志里已开奖的 pending 记录回填命中结果
+- 记录时机：云端 auto_update 每次运行时，把「下期预测」写入（已存在同 issue+window 则跳过，幂等）
+- 回填时机：下次运行时，对已记录但未回填的预测，用最新开奖数据补 draw/filled_at/hit
+- 命中判定：三位杀码均 ≠ 对应位开奖码（百杀≠百位 且 十杀≠十位 且 个杀≠个位）→ hit=true
+- 页面展示：累计真实命中率 + 近30期明细（近期→远期，待开奖显示 ⏳）
 """
-import csv
+import json
 import os
-from datetime import datetime, timezone, timedelta
 
-BJT = timezone(timedelta(hours=8))
-LOG_PATH = 'data/predictions.csv'
-FIELDS = ['issue', 'window', 'kh', 'kt', 'ko', 'fh', 'ft', 'fo',
-          'draw', 'r_h', 'r_t', 'r_o', 'status', 'updated']
+TRACK_PATH = 'data/predictions.jsonl'
 
 
-def _now():
-    return datetime.now(BJT).strftime('%Y-%m-%d %H:%M:%S')
-
-
-def load_log(path=None):
-    """返回 {(issue, window): row}，issue 为字符串"""
-    path = path or LOG_PATH
-    rows = {}
+def load_track(path=TRACK_PATH):
+    """读取全部跟踪记录，按期号升序返回列表"""
+    rows = []
     if not os.path.exists(path):
         return rows
     with open(path, 'r', encoding='utf-8') as f:
-        for r in csv.DictReader(f):
-            key = (r['issue'], r['window'])
-            rows[key] = r
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
     return rows
 
 
-def append_predictions(entries, path=None):
-    """追加当日预测。entries: [{issue, window, kh, kt, ko, fh, ft, fo}, ...]
-    已存在同 (issue, window) 则跳过（防重复运行/防篡改历史）。"""
-    path = path or LOG_PATH
-    log = load_log(path)
-    new_rows = []
-    for e in entries:
-        key = (e['issue'], e['window'])
-        if key in log:
-            continue
-        row = {
-            'issue': e['issue'], 'window': e['window'],
-            'kh': e['kh'], 'kt': e['kt'], 'ko': e['ko'],
-            'fh': e['fh'], 'ft': e['ft'], 'fo': e['fo'],
-            'draw': '', 'r_h': '', 'r_t': '', 'r_o': '', 'status': 'pending',
-            'updated': _now(),
-        }
-        log[key] = row
-        new_rows.append(row)
-    if new_rows:
-        _write_log(log, path)
-    return len(new_rows)
-
-
-def mark_settled(issues, hh, tt, oo, path=None):
-    """开奖数据推进后，回填所有已开奖的 pending 记录。返回本次回填条数。
-    只有 status=pending 且该期号已出现在开奖数据中才会回填；历史预测永不修改。"""
-    path = path or LOG_PATH
-    draws = {iss: (h, t, o) for iss, h, t, o in zip(issues, hh, tt, oo)}
-    log = load_log(path)
-    settled = 0
-    for key, row in log.items():
-        if row['status'] == 'settled':
-            continue
-        draw = draws.get(row['issue'])
-        if draw is None:
-            continue
-        ah, at, ao = draw
-        row['draw'] = f'{ah}{at}{ao}'
-        row['r_h'] = '1' if int(row['kh']) != ah else '0'
-        row['r_t'] = '1' if int(row['kt']) != at else '0'
-        row['r_o'] = '1' if int(row['ko']) != ao else '0'
-        row['status'] = 'settled'
-        settled += 1
-    if settled:
-        _write_log(log, path)
-    return settled
-
-
-def _write_log(log, path=None):
-    path = path or LOG_PATH
+def save_track(rows, path=TRACK_PATH):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, 'w', encoding='utf-8', newline='') as f:
-        w = csv.writer(f)
-        w.writerow(FIELDS)
-        for key in sorted(log.keys(), key=lambda k: (k[0], k[1])):
-            row = log[key]
-            w.writerow([row.get(c, '') for c in FIELDS])
+    with open(path, 'w', encoding='utf-8') as f:
+        for r in sorted(rows, key=lambda x: (x['issue'], x.get('window', ''))):
+            f.write(json.dumps(r, ensure_ascii=False) + '\n')
 
 
-def stats(log):
-    """按窗口汇总实绩。返回 {window: {...}}，仅统计已回填(settled)记录。"""
-    by_win = {}
-    for (issue, w), row in log.items():
-        if row['status'] != 'settled':
-            continue
-        by_win.setdefault(w, []).append(row)
-    out = {}
-    for w, rows in by_win.items():
-        rows.sort(key=lambda r: r['issue'])
-        n = len(rows)
-        all_hit = sum(1 for r in rows if r['r_h'] == '1' and r['r_t'] == '1' and r['r_o'] == '1')
-        # 当前连错 = 从最新一期往前数连续「未全中」期数
-        cur_streak = 0
-        for r in reversed(rows):
-            if r['r_h'] == '1' and r['r_t'] == '1' and r['r_o'] == '1':
-                break
-            cur_streak += 1
-        # 最大连错 = 历史上最长连续未全中
-        max_streak = cur = 0
-        for r in rows:
-            if r['r_h'] == '1' and r['r_t'] == '1' and r['r_o'] == '1':
-                cur = 0
-            else:
-                cur += 1
-                max_streak = max(max_streak, cur)
-        out[w] = {
-            'total': n,
-            'all_hit': all_hit,
-            'rate': round(all_hit / n * 100, 2) if n else 0.0,
-            'cur_streak': cur_streak,
-            'max_streak': max_streak,
-        }
-    return out
+def _now():
+    from datetime import datetime, timezone, timedelta
+    return datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')
 
 
-def history(log, limit=60):
-    """网页表格数据：按窗口分组，最新在前。返回 {window: [rows...]}"""
-    by_win = {}
-    for (issue, w), row in log.items():
-        by_win.setdefault(w, []).append(row)
-    out = {}
-    for w, rows in by_win.items():
-        rows.sort(key=lambda r: r['issue'], reverse=True)
-        out[w] = rows[:limit]
-    return out
+def backfill(issues_map, path=TRACK_PATH):
+    """回填：用最新开奖数据补全已记录但未回填的预测。返回回填条数。
+    issues_map: {issue_str: [b,s,g]}，只含已开奖期"""
+    rows = load_track(path)
+    filled = 0
+    for r in rows:
+        if 'draw' in r and 'hit' in r:
+            continue  # 已回填
+        draw = issues_map.get(r['issue'])
+        if draw is None:
+            continue  # 还没开奖
+        ah, at, ao = draw
+        # 命中判定：三位杀码均 ≠ 对应位开奖码
+        hit = (int(r['kh']) != ah) and (int(r['kt']) != at) and (int(r['ko']) != ao)
+        r['draw'] = f'{ah}{at}{ao}'
+        r['hit'] = bool(hit)
+        r['filled_at'] = _now()
+        filled += 1
+    if filled:
+        save_track(rows, path)
+    return filled
+
+
+def record_prediction(issue, window, kh, kt, ko, path=TRACK_PATH):
+    """记录一期预测（开奖前落盘）。已存在同 issue+window 则跳过（幂等）。返回是否新增"""
+    rows = load_track(path)
+    existing = {(r['issue'], r.get('window', '')) for r in rows}
+    if (issue, window) in existing:
+        return False
+    rows.append({
+        'issue': issue,
+        'window': window,
+        'kh': int(kh), 'kt': int(kt), 'ko': int(ko),
+        'predicted_at': _now(),
+    })
+    save_track(rows, path)
+    return True
+
+
+def summary(path=TRACK_PATH):
+    """汇总：真实命中统计只算已回填；明细表含全部记录（待开奖也显示 ⏳）"""
+    all_rows = load_track(path)
+    rows = [r for r in all_rows if 'hit' in r]  # 命中率只算已回填
+    hits = sum(1 for r in rows if r['hit'])
+    mx = cur = 0
+    for r in rows:
+        if r['hit']:
+            cur = 0
+        else:
+            cur += 1
+            mx = max(mx, cur)
+    recent = sorted(all_rows, key=lambda x: x['issue'], reverse=True)[:30]  # 近期→远期，含待开奖
+    recent = [{
+        'issue': r['issue'], 'window': r.get('window', ''),
+        'kh': r.get('kh'), 'kt': r.get('kt'), 'ko': r.get('ko'),
+        'draw': r.get('draw'), 'hit': r.get('hit'),
+        'predicted_at': r.get('predicted_at', ''),
+    } for r in recent]
+    return {
+        'total': len(rows), 'hits': hits,
+        'rate': round(hits / len(rows) * 100, 2) if rows else 0.0,
+        'max_streak': mx, 'recent': recent,
+        'pending': len(all_rows) - len(rows),
+    }
