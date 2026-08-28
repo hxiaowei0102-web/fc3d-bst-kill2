@@ -2,9 +2,9 @@
 """
 福彩3D 新版百十个杀一码 — 云端全自动更新入口（GitHub Actions 定时运行）
 =============================================
-流程：多源降级抓取最新开奖 → 追加到CSV → 回填每日预测实绩 → 双窗口(250/350期)暴力穷举选最优公式
-      → 写入当日预测 → 回测 → 生成 static/index.html（部署到 GitHub Pages）
-幂等设计：数据、公式、实绩均无变化时**不重写页面**（含时间戳），
+流程：多源降级抓取最新开奖 → 追加到CSV → 双窗口(250/350期)暴力穷举选最优公式
+      → 每日预测跟踪(回填昨日/记录今日) → 回测 → 生成 static/index.html
+幂等设计：数据、公式、预测跟踪均无变化时**不重写页面**（含时间戳），
          workflow 的 git diff 检测不到任何变化即跳过提交与部署，零无效更新。
 """
 import sys, io, os, time, json
@@ -17,12 +17,13 @@ os.chdir(ROOT)
 
 OUT_HTML = 'static/index.html'
 COMBO_JSON = 'best_formula.json'
+TRACK_PATH = 'data/predictions.jsonl'
 
 
 def main():
     t0 = time.time()
     print("=" * 50)
-    print("  福彩3D 百十个位各杀一码 · 云端全自动更新（双窗口250/350期 + 每日实绩跟踪）")
+    print("  福彩3D 百十个位各杀一码 · 云端全自动更新（双窗口250/350期 + 每日预测跟踪）")
     print(f"  时间(北京): {datetime.now(BJT).strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 50)
 
@@ -34,15 +35,10 @@ def main():
     except Exception as e:
         print(f"  ⚠ 数据同步异常，沿用现有CSV: {str(e)[:80]}")
 
-    print("\n[2/5] 回填每日预测实绩（已开奖的 pending → settled）")
-    import tracking
+    print("\n[2/5] 双窗口暴力穷举（250期 + 350期，各905万池，三位置独立选优）")
+    import bruteforce
     from engine import load_data
     issues, hh, tt, oo = load_data()
-    settled = tracking.mark_settled(issues, hh, tt, oo)
-    print(f"  本次回填 {settled} 条实绩")
-
-    print("\n[3/5] 双窗口暴力穷举（250期 + 350期，各905万池，三位置独立选优）")
-    import bruteforce
     windows = {}
     for w in bruteforce.WINDOWS:
         best, pool_size = bruteforce.search_best(hh, tt, oo, w, verbose=False)
@@ -66,28 +62,32 @@ def main():
     new_combo = {w: windows[w]['combo'] for w in windows}
     formula_changed = (old_combo != new_combo)
 
-    print("\n[4/5] 写入当日预测（实绩日志，历史记录不可篡改）")
+    print("\n[3/5] 每日预测跟踪（回填昨日 + 记录今日）")
+    import tracking
+    # 1) 回填：已记录的预测，若对应期已开奖，补真实开奖与命中
+    issues_map = {iss: [b, s, g] for iss, b, s, g in zip(issues, hh, tt, oo)}
+    filled = tracking.backfill(issues_map, TRACK_PATH)
+    if filled:
+        print(f"  ✓ 已回填 {filled} 期预测结果")
+    # 2) 记录：下期预测落盘（同 issue+window 已存在则跳过，幂等）
     import backtest
-    next_issue = backtest.predict_next('data/fc3d-history.csv', list(windows.values())[0]['combo'])['next_issue']
-    entries = []
+    pred = backtest.predict_next('data/fc3d-history.csv', list(windows.values())[0]['combo'])
+    recorded = 0
     for w, win in windows.items():
-        # 用 backtest 计算当日实际杀码数字（不是公式名）
-        pred = backtest.predict_next('data/fc3d-history.csv', win['combo'])
-        entries.append({
-            'issue': next_issue, 'window': w,
-            'kh': pred['kh'], 'kt': pred['kt'], 'ko': pred['ko'],
-            'fh': win['combo']['h'], 'ft': win['combo']['t'], 'fo': win['combo']['o'],
-        })
-    appended = tracking.append_predictions(entries)
-    print(f"  新增预测记录 {appended} 条（预测期号 {next_issue}）")
+        p = backtest.predict_next('data/fc3d-history.csv', win['combo'])
+        if tracking.record_prediction(pred['next_issue'], w, p['kh'], p['kt'], p['ko'], TRACK_PATH):
+            recorded += 1
+            print(f"  ✓ 已记录预测 {pred['next_issue']} [{w}期]: 百杀{p['kh']} 十杀{p['kt']} 个杀{p['ko']}")
+        else:
+            print(f"  - 预测 {pred['next_issue']} [{w}期] 已存在，跳过（幂等）")
+    track_summary = tracking.summary(TRACK_PATH)
 
-    # 实绩有任何变化（新增预测/回填结果）都需要重新生成页面
-    track_changed = (appended > 0 or settled > 0)
-
+    # 页面是否需要重建：数据新增 / 公式变化 / 回填或新记录发生
+    track_changed = (filled > 0 or recorded > 0)
     if added == 0 and not formula_changed and not track_changed:
-        print("\n[5/5] 数据/公式/实绩均无变化，跳过页面生成（零无效更新）")
+        print("\n[4/5] 数据/公式/预测跟踪均无变化，跳过页面生成（零无效更新）")
     else:
-        print("\n[5/5] 回测 + 生成网页")
+        print("\n[4/5] 回测 + 生成网页")
         result = {
             'pool_size': pool_size,
             'data_info': {'n_issues': len(issues), 'first': issues[0], 'last': issues[-1]},
@@ -95,12 +95,14 @@ def main():
         }
         with open(COMBO_JSON, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
-        print(f"  已写入 {COMBO_JSON}（公式变化: {formula_changed}, 新增数据: {added}期, 实绩: 回填{settled}/新增{appended}）")
+        print(f"  已写入 {COMBO_JSON}（公式变化: {formula_changed}, 新增数据: {added}期, 跟踪: 回填{filled}/新记录{recorded}）")
         os.makedirs('static', exist_ok=True)
         import gen_site
         gen_site.main(out_path=OUT_HTML)
 
-    print(f"\n  总耗时 {time.time()-t0:.1f} 秒")
+    print("\n[5/5] 完成")
+    print(f"  预测跟踪: 累计已开奖 {track_summary['total']} 期, 真实命中 {track_summary['hits']} 期 = {track_summary['rate']}%, 待开奖 {track_summary['pending']} 期")
+    print(f"  总耗时 {time.time()-t0:.1f} 秒")
 
 
 if __name__ == '__main__':
