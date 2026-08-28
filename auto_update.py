@@ -71,9 +71,11 @@ def main():
     next_issue = backtest.predict_next('data/fc3d-history.csv', list(windows.values())[0]['combo'])['next_issue']
     entries = []
     for w, win in windows.items():
+        # 用 backtest 计算当日实际杀码数字（不是公式名）
+        pred = backtest.predict_next('data/fc3d-history.csv', win['combo'])
         entries.append({
             'issue': next_issue, 'window': w,
-            'kh': win['combo']['h'], 'kt': win['combo']['t'], 'ko': win['combo']['o'],
+            'kh': pred['kh'], 'kt': pred['kt'], 'ko': pred['ko'],
             'fh': win['combo']['h'], 'ft': win['combo']['t'], 'fo': win['combo']['o'],
         })
     appended = tracking.append_predictions(entries)
