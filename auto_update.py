@@ -101,7 +101,9 @@ def main():
         gen_site.main(out_path=OUT_HTML)
 
     print("\n[5/5] 完成")
-    print(f"  预测跟踪: 累计已开奖 {track_summary['total']} 期, 真实命中 {track_summary['hits']} 期 = {track_summary['rate']}%, 待开奖 {track_summary['pending']} 期")
+    print(f"  预测跟踪: " + ", ".join(
+        f"[{w}版] 已开奖{t['total']}期 命中{t['hits']}期={t['rate']}% 待开奖{t['pending']}期"
+        for w, t in track_summary.items()))
     print(f"  总耗时 {time.time()-t0:.1f} 秒")
 
 
