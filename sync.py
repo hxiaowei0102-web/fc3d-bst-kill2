@@ -24,12 +24,14 @@ FILES = [
     'best_formula.json',
     'bruteforce.py',
     'data/fc3d-history.csv',
+    'data/predictions.csv',
     'engine.py',
     'fetch.py',
     'formulas.py',
     'gen_site.py',
     'static/index.html',
     'sync.py',
+    'tracking.py',
 ]
 
 
