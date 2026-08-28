@@ -61,12 +61,8 @@ def build_data():
     latest = issues[-1]
     last_draw = ''.join(map(str, [hh[-1], tt[-1], oo[-1]]))
 
-    # 每日预测实绩：按窗口汇总 + 历史明细
-    log = tracking.load_log()
-    track = {
-        'stats': tracking.stats(log),
-        'history': tracking.history(log, limit=60),
-    }
+    # 每日预测跟踪：JSONL 真实样本外记录（胆码项目风格）
+    track = tracking.summary()
 
     windows = {}
     for wstr, win in bf['windows'].items():
@@ -148,6 +144,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 .tr-miss { border-left: 3px solid #f44336; }
 .badge-y { color: #2e7d32; font-weight: 700; }
 .badge-n { color: #c62828; font-weight: 700; }
+.badge-w { color: #9e9e9e; font-weight: 700; }
 .info { background: #fff; border-radius: 8px; padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 8px; }
 .info h3 { font-size: .85rem; margin-bottom: 6px; }
 .algo { font-size: .68rem; padding: 6px 8px; background: #f5f5f5; border-radius: 4px; line-height: 1.6; margin-bottom: 5px; }
@@ -198,17 +195,21 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
   </div>
 </div>
 <div class="table-wrap">
-  <h3>📈 每日预测实绩 <span style="font-size:.65rem;color:#999">(开奖后自动回填 · 历史预测永不篡改)</span></h3>
-  <div class="win-tabs" id="trackTabs" style="margin:8px 10px 0"></div>
-  <div class="stats" id="trackStats" style="margin:8px 10px"></div>
-  <div class="scroll">
+  <h3>📅 每日预测跟踪 <span style="font-size:.65rem;color:#999">(开奖前记录 · 开奖后回填 · 真实样本外)</span></h3>
+  <div class="stats" style="margin:8px 12px 6px">
+    <div class="stat stat-main"><div class="val g" id="tRate">-</div><div class="lbl">★累计真实命中</div></div>
+    <div class="stat"><div class="val" id="tTotal">-</div><div class="lbl">已开奖期数</div></div>
+    <div class="stat"><div class="val" id="tHits">-</div><div class="lbl">命中期数</div></div>
+    <div class="stat"><div class="val" id="tPending">-</div><div class="lbl">待开奖</div></div>
+  </div>
+  <div class="scroll" style="max-height:360px">
     <table class="tbl">
-      <thead><tr><th>期号</th><th>开奖</th><th>百杀</th><th>十杀</th><th>个杀</th><th>百</th><th>十</th><th>个</th><th>全中</th></tr></thead>
+      <thead><tr><th>期号</th><th>开奖</th><th>窗口</th><th>百杀</th><th>十杀</th><th>个杀</th><th>结果</th></tr></thead>
       <tbody id="trackBody"></tbody>
     </table>
   </div>
   <div class="track-note">
-    实绩 = 当日预测时写入的杀码 + 次日开奖回填结果，与窗口回测互相独立。<b>回测是窗口内重算（含历史拟合），实绩是逐日真实发生的预测</b>，看长期请以实绩为准。
+    记录规则：预测在<b>开奖前</b>落盘（第i期预测只用第i-1/i-2期），开奖后自动回填。<b>累计真实命中率是唯一的样本外指标</b>，与回测表(历史拟合)无关。
   </div>
 </div>
 <div class="info">
@@ -275,55 +276,25 @@ function renderWin(w) {
     tbody.appendChild(tr);
   });
 }
-var curTrack = null;
-function renderTrackTabs() {
-  var tabs = document.getElementById('trackTabs');
-  tabs.innerHTML = '';
-  Object.keys(P.track.stats).forEach(function(w) {
-    var v = P.track.stats[w];
-    var d = document.createElement('div');
-    d.className = 'win-tab'; d.id = 'ttab-' + w;
-    d.innerHTML = '<span class="t-name">' + w + '期版</span><span class="t-rate">' + v.total + '期已验</span>';
-    d.onclick = function() { renderTrack(w); };
-    tabs.appendChild(d);
-  });
-}
-function renderTrack(w) {
-  var v = P.track.stats[w];
-  if (!v) return;
-  curTrack = w;
-  document.querySelectorAll('#trackTabs .win-tab').forEach(function(t){ t.classList.remove('active'); });
-  var tab = document.getElementById('ttab-' + w); if (tab) tab.classList.add('active');
-  var s = document.getElementById('trackStats');
-  s.innerHTML =
-    '<div class="stat stat-main"><div class="val g">' + v.rate + '%</div><div class="lbl">★实绩全中率</div></div>' +
-    '<div class="stat"><div class="val">' + v.total + '</div><div class="lbl">已验证期数</div></div>' +
-    '<div class="stat"><div class="val o">' + v.cur_streak + '期</div><div class="lbl">当前连错</div></div>' +
-    '<div class="stat"><div class="val">' + v.max_streak + '期</div><div class="lbl">最大连错</div></div>';
-  var tbody = document.getElementById('trackBody');
-  tbody.innerHTML = '';
-  var rows = P.track.history[w] || [];
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="color:#999;padding:14px">暂无已验证实绩，等待开奖回填…</td></tr>';
-    return;
-  }
-  rows.forEach(function(r) {
-    var pend = (r.status == 'pending' || r.r_h == '');
-    var ah = (!pend && r.r_h == '1' && r.r_t == '1' && r.r_o == '1');
-    var tr = document.createElement('tr');
-    tr.className = pend ? '' : (ah ? 'tr-hit' : 'tr-miss');
-    var cell = function(v) {
-      if (pend) return '<td style="color:#bbb">待</td>';
-      return '<td class="' + (v=='1'?'badge-y':'badge-n') + '">' + (v=='1'?'✓':'✗') + '</td>';
-    };
-    tr.innerHTML =
-      '<td>' + r.issue + '</td><td><b>' + (r.draw || '—') + '</b></td>' +
-      '<td class="kill">' + r.kh + '</td><td class="kill">' + r.kt + '</td><td class="kill">' + r.ko + '</td>' +
-      cell(r.r_h) + cell(r.r_t) + cell(r.r_o) +
-      (pend ? '<td style="color:#bbb">待</td>' : '<td class="' + (ah?'badge-y':'badge-n') + '">' + (ah?'✓全中':'✗') + '</td>');
-    tbody.appendChild(tr);
-  });
-}
+// 每日预测跟踪（胆码风格：累计真实命中 + 近30期明细）
+document.getElementById('tRate').textContent = P.track.rate + '%';
+document.getElementById('tTotal').textContent = P.track.total + '期';
+document.getElementById('tHits').textContent = P.track.hits + '期';
+document.getElementById('tPending').textContent = P.track.pending + '期';
+var tbody2 = document.getElementById('trackBody');
+P.track.recent.forEach(function(r) {
+  var tr = document.createElement('tr');
+  var pending = (r.hit === undefined || r.hit === null);
+  tr.className = pending ? '' : (r.hit ? 'tr-hit' : 'tr-miss');
+  var drawTxt = r.draw ? r.draw : '待开奖';
+  var resTxt = pending ? '⏳' : (r.hit ? '✓' : '✗');
+  tr.innerHTML =
+    '<td>' + r.issue + '</td><td><b>' + drawTxt + '</b></td>' +
+    '<td>' + r.window + '</td>' +
+    '<td class="kill">' + r.kh + '</td><td class="kill">' + r.kt + '</td><td class="kill">' + r.ko + '</td>' +
+    '<td class="' + (pending ? 'badge-w' : (r.hit ? 'badge-y' : 'badge-n')) + '">' + resTxt + '</td>';
+  tbody2.appendChild(tr);
+});
 document.getElementById('predIssue').textContent = P.next_issue;
 document.getElementById('lastInfo').textContent = '上期 ' + P.last_issue + ' = ' + P.last_draw;
 document.getElementById('updateTime').textContent = '更新 ' + P.updated;
@@ -331,9 +302,6 @@ document.getElementById('dataInfo').textContent = P.data_info.last;
 document.getElementById('sPool').textContent = P.pool_size >= 10000 ? (P.pool_size/10000).toFixed(1) + '万' : P.pool_size;
 renderTabs();
 renderWin(Object.keys(P.windows)[0]);
-renderTrackTabs();
-var tw = Object.keys(P.track.stats)[0];
-if (tw) renderTrack(tw);
 </script>
 </body>
 </html>
