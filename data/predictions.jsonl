@@ -1,4 +1,6 @@
 {"issue": "2026230", "window": "250", "kh": 3, "kt": 5, "ko": 5, "predicted_at": "2026-08-28 18:37", "draw": "066", "hit": true, "filled_at": "2026-08-29 07:21"}
 {"issue": "2026230", "window": "350", "kh": 4, "kt": 4, "ko": 5, "predicted_at": "2026-08-28 18:37", "draw": "066", "hit": true, "filled_at": "2026-08-29 07:21"}
-{"issue": "2026231", "window": "250", "kh": 2, "kt": 7, "ko": 5, "predicted_at": "2026-08-29 07:21"}
-{"issue": "2026231", "window": "350", "kh": 8, "kt": 7, "ko": 5, "predicted_at": "2026-08-29 07:21"}
+{"issue": "2026231", "window": "250", "kh": 2, "kt": 7, "ko": 5, "predicted_at": "2026-08-29 07:21", "draw": "733", "hit": true, "filled_at": "2026-08-30 01:29"}
+{"issue": "2026231", "window": "350", "kh": 8, "kt": 7, "ko": 5, "predicted_at": "2026-08-29 07:21", "draw": "733", "hit": true, "filled_at": "2026-08-30 01:29"}
+{"issue": "2026232", "window": "250", "kh": 5, "kt": 6, "ko": 4, "predicted_at": "2026-08-30 01:29"}
+{"issue": "2026232", "window": "350", "kh": 5, "kt": 1, "ko": 6, "predicted_at": "2026-08-30 01:29"}
