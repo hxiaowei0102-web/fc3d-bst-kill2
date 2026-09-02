@@ -8,5 +8,7 @@
 {"issue": "2026233", "window": "350", "kh": 2, "kt": 8, "ko": 8, "predicted_at": "2026-08-31 01:54", "draw": "970", "hit": true, "filled_at": "2026-09-01 03:49"}
 {"issue": "2026234", "window": "250", "kh": 9, "kt": 9, "ko": 1, "predicted_at": "2026-09-01 03:49", "draw": "695", "hit": false, "filled_at": "2026-09-02 01:35"}
 {"issue": "2026234", "window": "350", "kh": 2, "kt": 1, "ko": 7, "predicted_at": "2026-09-01 03:49", "draw": "695", "hit": true, "filled_at": "2026-09-02 01:35"}
-{"issue": "2026235", "window": "250", "kh": 9, "kt": 4, "ko": 8, "predicted_at": "2026-09-02 01:35"}
-{"issue": "2026235", "window": "350", "kh": 0, "kt": 2, "ko": 1, "predicted_at": "2026-09-02 01:35"}
+{"issue": "2026235", "window": "250", "kh": 9, "kt": 4, "ko": 8, "predicted_at": "2026-09-02 01:35", "draw": "219", "hit": true, "filled_at": "2026-09-03 01:33"}
+{"issue": "2026235", "window": "350", "kh": 0, "kt": 2, "ko": 1, "predicted_at": "2026-09-02 01:35", "draw": "219", "hit": true, "filled_at": "2026-09-03 01:33"}
+{"issue": "2026236", "window": "250", "kh": 4, "kt": 4, "ko": 8, "predicted_at": "2026-09-03 01:33"}
+{"issue": "2026236", "window": "350", "kh": 2, "kt": 8, "ko": 1, "predicted_at": "2026-09-03 01:33"}
