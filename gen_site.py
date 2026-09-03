@@ -104,7 +104,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>福彩3D 百十个位各杀一码 · 905万公式池暴力穷举</title>
+<title>福彩3D 百十个位各杀一码 · 27.6万公式池暴力穷举</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #333; }
@@ -209,7 +209,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
   </div>
 </div>
 <div class="info">
-  <h3>三条最优公式（905万池暴力穷举·窗口内命中率最高）</h3>
+  <h3>三条最优公式（27.6万池暴力穷举·窗口内命中率最高）</h3>
   <div id="algoList"></div>
   <div style="font-size:.68rem;color:#888;margin-top:8px;line-height:1.6">
     3杀全中随机基线 72.9%（每位置杀1码 0.9³）。本窗口全中 <b id="allVal">-</b>。
