@@ -160,7 +160,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 <div class="container">
 <div class="header">
   <h1>福彩3D 百十个位各杀一码</h1>
-  <div class="sub">905万公式池暴力穷举 · 只参考最新350/450期 · 每位置各杀1码 · 双窗口切换</div>
+  <div class="sub">27.6万公式池暴力穷举 · 只参考最新350/450期 · 每位置各杀1码 · 双窗口切换</div>
 </div>
 <div class="banner">
   <div class="issue" id="predIssue">-</div>
