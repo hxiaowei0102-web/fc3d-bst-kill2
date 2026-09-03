@@ -42,15 +42,19 @@ def _update_best(best, pkey, cand_hits, name):
         best[pkey] = (cand_hits, name)
 
 
-def search_best(hh, tt, oo, window, verbose=True):
-    """在最新 window 期上向量化穷举 905万池，返回三位置最优 {pos: (name, rate, hits)}"""
+def search_best(hh, tt, oo, window, verbose=True, include_triple=False):
+    """在最新 window 期上向量化穷举公式池，返回三位置最优 {pos: (name, rate, hits)}
+    include_triple=False(默认): 只用单+双池(27.6万) —— 2026-09-03 实测样本外 80% > 全池73.3%
+                                 且快30倍；三特征属过拟合，生产默认关闭。
+    include_triple=True: 单+双+三全池(905万)，保留能力备用。"""
     N = len(hh)
     if N < window + 1:
         raise ValueError(
             f"数据量不足：仅 {N} 期，至少需要 {window+1} 期（{window}期被预测 + 1期上期）。")
     start = N - window
     if verbose:
-        print(f"  穷举窗口: 第 {start+1}..{N} 条数据，共 {window} 期")
+        print(f"  穷举窗口: 第 {start+1}..{N} 条数据，共 {window} 期"
+              f"({'单+双池27.6万' if not include_triple else '全池905万'})")
 
     rows = [
         feat_list(
@@ -100,23 +104,24 @@ def search_best(hh, tt, oo, window, verbose=True):
                 _update_best(best, pkey, cand,
                              formula_name(((int(_PC1[r]), i), (int(_PC2[r]), j)), int(cbest_all[r])))
 
-    # ---------- 三特征（32509 组 × 27 系数） ----------
-    for i, j, k in _TRIPLES:
-        a = fcols[i]
-        b = fcols[j]
-        c = fcols[k]
-        base27 = (_TC1[:, None] * a[None, :] + _TC2[:, None] * b[None, :] + _TC3[:, None] * c[None, :]) % 10
-        for pkey, Tp in TARGETS:
-            d = (base27 - Tp[None, :]) % 10
-            hist = np.bincount((d + _ROWT).ravel(), minlength=_NT * 10).reshape(_NT, 10)
-            mn_all = hist.min(axis=1)
-            cbest_all = np.where(hist == mn_all[:, None], _REV[None, :], 10).min(axis=1)
-            cand_all = W - mn_all
-            for r in np.nonzero(cand_all >= best[pkey][0])[0]:
-                cand = int(cand_all[r])
-                _update_best(best, pkey, cand,
-                             formula_name(((int(_TC1[r]), i), (int(_TC2[r]), j), (int(_TC3[r]), k)),
-                                          int(cbest_all[r])))
+    # ---------- 三特征（32509 组 × 27 系数，默认关：过拟合+慢） ----------
+    if include_triple:
+        for i, j, k in _TRIPLES:
+            a = fcols[i]
+            b = fcols[j]
+            c = fcols[k]
+            base27 = (_TC1[:, None] * a[None, :] + _TC2[:, None] * b[None, :] + _TC3[:, None] * c[None, :]) % 10
+            for pkey, Tp in TARGETS:
+                d = (base27 - Tp[None, :]) % 10
+                hist = np.bincount((d + _ROWT).ravel(), minlength=_NT * 10).reshape(_NT, 10)
+                mn_all = hist.min(axis=1)
+                cbest_all = np.where(hist == mn_all[:, None], _REV[None, :], 10).min(axis=1)
+                cand_all = W - mn_all
+                for r in np.nonzero(cand_all >= best[pkey][0])[0]:
+                    cand = int(cand_all[r])
+                    _update_best(best, pkey, cand,
+                                 formula_name(((int(_TC1[r]), i), (int(_TC2[r]), j), (int(_TC3[r]), k)),
+                                              int(cbest_all[r])))
 
     out = {}
     for pos in ['h', 't', 'o']:
@@ -124,7 +129,8 @@ def search_best(hh, tt, oo, window, verbose=True):
         out[pos] = (name, hits / W, hits)
         if verbose:
             print(f"  {pos} 最优: {name}  命中 {hits}/{W} = {hits/W*100:.2f}%")
-    return out, 9053550   # (out, total) 与 bruteforce.py 接口一致，total=全池规格数
+    total = 9053550 if include_triple else 276120
+    return out, total   # (out, total) 与 bruteforce.py 接口一致
 
 
 def main():
@@ -133,9 +139,11 @@ def main():
     print(f"数据 {N} 期：{issues[0]} ~ {issues[-1]}")
 
     windows = {}
+    pool_size = 0
     for w in WINDOWS:
         print(f"\n===== 窗口 {w} 期 =====")
-        best, _ = search_best(hh, tt, oo, w)
+        best, ps = search_best(hh, tt, oo, w)
+        pool_size = ps
         windows[str(w)] = {
             'combo': {pos: best[pos][0] for pos in ['h', 't', 'o']},
             'rates': {pos: round(best[pos][1] * 100, 2) for pos in ['h', 't', 'o']},
@@ -143,7 +151,7 @@ def main():
         }
 
     result = {
-        'pool_size': 9053550,
+        'pool_size': pool_size,
         'data_info': {'n_issues': N, 'first': issues[0], 'last': issues[-1]},
         'windows': windows,
     }
