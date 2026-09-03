@@ -23,6 +23,7 @@ FILES = [
     'backtest.py',
     'best_formula.json',
     'bruteforce.py',
+    'bruteforce_v2.py',
     'data/fc3d-history.csv',
     'data/predictions.jsonl',
     'engine.py',
