@@ -23,7 +23,7 @@ TRACK_PATH = 'data/predictions.jsonl'
 def main():
     t0 = time.time()
     print("=" * 50)
-    print("  福彩3D 百十个位各杀一码 · 云端全自动更新（双窗口250/350期 + 每日预测跟踪）")
+    print("  福彩3D 百十个位各杀一码 · 云端全自动更新（双窗口250/450期 + 每日预测跟踪）")
     print(f"  时间(北京): {datetime.now(BJT).strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 50)
 
@@ -35,8 +35,8 @@ def main():
     except Exception as e:
         print(f"  ⚠ 数据同步异常，沿用现有CSV: {str(e)[:80]}")
 
-    print("\n[2/5] 双窗口暴力穷举（250期 + 350期，各905万池，三位置独立选优）")
-    import bruteforce
+    print("\n[2/5] 双窗口暴力穷举（向量化 905万池，三位置独立选优）")
+    import bruteforce_v2 as bruteforce   # v2 向量化：单窗口 137s→13s
     from engine import load_data
     issues, hh, tt, oo = load_data()
     windows = {}
