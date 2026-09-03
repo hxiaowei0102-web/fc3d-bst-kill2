@@ -35,7 +35,7 @@ def main():
     except Exception as e:
         print(f"  ⚠ 数据同步异常，沿用现有CSV: {str(e)[:80]}")
 
-    print("\n[2/5] 双窗口暴力穷举（向量化 905万池，三位置独立选优）")
+    print("\n[2/5] 双窗口暴力穷举（向量化 单+双池27.6万，三位置独立选优）")
     import bruteforce_v2 as bruteforce   # v2 向量化：单窗口 137s→13s
     from engine import load_data
     issues, hh, tt, oo = load_data()
@@ -71,15 +71,14 @@ def main():
         print(f"  ✓ 已回填 {filled} 期预测结果")
     # 2) 记录：下期预测落盘（同 issue+window 已存在则跳过，幂等）
     import backtest
-    pred = backtest.predict_next('data/fc3d-history.csv', list(windows.values())[0]['combo'])
     recorded = 0
     for w, win in windows.items():
         p = backtest.predict_next('data/fc3d-history.csv', win['combo'])
-        if tracking.record_prediction(pred['next_issue'], w, p['kh'], p['kt'], p['ko'], TRACK_PATH):
+        if tracking.record_prediction(p['next_issue'], w, p['kh'], p['kt'], p['ko'], TRACK_PATH):
             recorded += 1
-            print(f"  ✓ 已记录预测 {pred['next_issue']} [{w}期]: 百杀{p['kh']} 十杀{p['kt']} 个杀{p['ko']}")
+            print(f"  ✓ 已记录预测 {p['next_issue']} [{w}期]: 百杀{p['kh']} 十杀{p['kt']} 个杀{p['ko']}")
         else:
-            print(f"  - 预测 {pred['next_issue']} [{w}期] 已存在，跳过（幂等）")
+            print(f"  - 预测 {p['next_issue']} [{w}期] 已存在，跳过（幂等）")
     track_summary = tracking.summary(TRACK_PATH)
 
     # 页面是否需要重建：数据新增 / 公式变化 / 回填或新记录发生
