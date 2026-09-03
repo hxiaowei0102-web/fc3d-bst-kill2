@@ -160,7 +160,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 <div class="container">
 <div class="header">
   <h1>福彩3D 百十个位各杀一码</h1>
-  <div class="sub">905万公式池暴力穷举 · 只参考最新250/450期 · 每位置各杀1码 · 双窗口切换</div>
+  <div class="sub">905万公式池暴力穷举 · 只参考最新350/450期 · 每位置各杀1码 · 双窗口切换</div>
 </div>
 <div class="banner">
   <div class="issue" id="predIssue">-</div>
@@ -205,7 +205,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     </table>
   </div>
   <div class="track-note">
-    记录规则：预测在<b>开奖前</b>落盘（第i期预测只用第i-1/i-2期），开奖后自动回填。<b>250期版与450期版各自独立统计</b>，累计真实命中率是唯一的样本外指标，与回测表(历史拟合)无关。
+    记录规则：预测在<b>开奖前</b>落盘（第i期预测只用第i-1/i-2期），开奖后自动回填。<b>350期版与450期版各自独立统计</b>，累计真实命中率是唯一的样本外指标，与回测表(历史拟合)无关。
   </div>
 </div>
 <div class="info">
@@ -272,7 +272,7 @@ function renderWin(w) {
     tbody.appendChild(tr);
   });
 }
-// 每日预测跟踪（两版独立：250期版 / 450期版 tab 切换）
+// 每日预测跟踪（两版独立：350期版 / 450期版 tab 切换）
 var curTrack = null;
 function renderTrackTabs() {
   var tabs = document.getElementById('trackTabs');
