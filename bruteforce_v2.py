@@ -17,7 +17,7 @@ from engine import load_data
 from formulas import NF, COEFFS, TRIPLE_COEFFS, feat_list, formula_name
 
 CSV = 'data/fc3d-history.csv'
-WINDOWS = (250, 450)   # 双窗口（250期 / 450期）— 2026-09-03 网格扫描后由(250,350)升级
+WINDOWS = (350, 450)   # 双窗口（350期 / 450期）— 2026-09-03 老板要求 250版改350版
 
 # ---------- 模块级向量化常量 ----------
 # 双特征系数序：c1 外层、c2 内层（同 iter_specs）
