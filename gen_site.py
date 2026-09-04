@@ -295,20 +295,31 @@ function renderWin(w) {
     '<div class="algo"><b>百位</b> <span class="f">' + v.combo.h + '</span><span class="zh">' + v.explain.h + '</span></div>' +
     '<div class="algo"><b>十位</b> <span class="f">' + v.combo.t + '</span><span class="zh">' + v.explain.t + '</span></div>' +
     '<div class="algo"><b>个位</b> <span class="f">' + v.combo.o + '</span><span class="zh">' + v.explain.o + '</span></div>';
+  // 回测表：分批渐进渲染（L3）— 450行分~9批,每批让出主线程,手机端不卡死
   var tbody = document.getElementById('btBody');
   tbody.innerHTML = '';
-  v.rows.forEach(function(r) {
-    var tr = document.createElement('tr');
-    tr.className = r.ah ? 'tr-hit' : 'tr-miss';
-    tr.innerHTML =
-      '<td>' + r.issue + '</td><td><b>' + r.draw + '</b></td>' +
-      '<td class="kill">' + r.kh + '</td><td class="kill">' + r.kt + '</td><td class="kill">' + r.ko + '</td>' +
-      '<td class="' + (r.hh?'badge-y':'badge-n') + '">' + (r.hh?'✓':'✗') + '</td>' +
-      '<td class="' + (r.th?'badge-y':'badge-n') + '">' + (r.th?'✓':'✗') + '</td>' +
-      '<td class="' + (r.oh?'badge-y':'badge-n') + '">' + (r.oh?'✓':'✗') + '</td>' +
-      '<td class="' + (r.ah?'badge-y':'badge-n') + '">' + (r.ah?'✓全中':'✗') + '</td>';
-    tbody.appendChild(tr);
-  });
+  var rows = v.rows, idx = 0, BATCH = 50;
+  (function nextBatch() {
+    if (idx >= rows.length) return;
+    var frag = document.createDocumentFragment();
+    var end = Math.min(idx + BATCH, rows.length);
+    for (var i = idx; i < end; i++) {
+      var r = rows[i];
+      var tr = document.createElement('tr');
+      tr.className = r.ah ? 'tr-hit' : 'tr-miss';
+      tr.innerHTML =
+        '<td>' + r.issue + '</td><td><b>' + r.draw + '</b></td>' +
+        '<td class="kill">' + r.kh + '</td><td class="kill">' + r.kt + '</td><td class="kill">' + r.ko + '</td>' +
+        '<td class="' + (r.hh?'badge-y':'badge-n') + '">' + (r.hh?'✓':'✗') + '</td>' +
+        '<td class="' + (r.th?'badge-y':'badge-n') + '">' + (r.th?'✓':'✗') + '</td>' +
+        '<td class="' + (r.oh?'badge-y':'badge-n') + '">' + (r.oh?'✓':'✗') + '</td>' +
+        '<td class="' + (r.ah?'badge-y':'badge-n') + '">' + (r.ah?'✓全中':'✗') + '</td>';
+      frag.appendChild(tr);
+    }
+    tbody.appendChild(frag);
+    idx = end;
+    if (idx < rows.length) requestAnimationFrame(nextBatch);
+  })();
 }
 // 每日预测跟踪（450期版）
 var curTrack = null;
