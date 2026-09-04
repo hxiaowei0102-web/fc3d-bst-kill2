@@ -13,7 +13,7 @@ from engine import load_data
 from formulas import feat_list, iter_specs, formula_name
 
 CSV = 'data/fc3d-history.csv'
-WINDOWS = (350, 450)   # 双窗口（350期 / 450期）— 2026-09-03 老板要求 250版改350版
+WINDOWS = (450,)   # 单窗口 450期 — 2026-09-04 老板要求删350只留450
 
 
 def search_best(hh, tt, oo, window, verbose=True):
