@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-福彩3D 新版百十个杀一码 — 生成自包含本地网页（双窗口切换）
+福彩3D 新版百十个杀一码 — 生成自包含本地网页（单窗口450期）
 =============================================
 风格复刻 D:\\百十个杀一码\\index.html，加「200期/300期」窗口切换。
 """
@@ -160,14 +160,14 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
 <div class="container">
 <div class="header">
   <h1>福彩3D 百十个位各杀一码</h1>
-  <div class="sub">27.6万公式池暴力穷举 · 只参考最新350/450期 · 每位置各杀1码 · 双窗口切换</div>
+  <div class="sub">27.6万公式池暴力穷举 · 只参考最新450期 · 每位置各杀1码</div>
 </div>
 <div class="banner">
   <div class="issue" id="predIssue">-</div>
   <div class="last" id="lastInfo"></div>
   <div class="time" id="updateTime"></div>
 </div>
-<div class="win-tabs" id="winTabs"></div>
+<div class="win-tabs" id="winTabs" style="display:none"></div>
 <div class="kill-grid">
   <div class="kill-card"><div class="pos-label">百位杀一码</div><span class="num" id="kh">-</span></div>
   <div class="kill-card"><div class="pos-label">十位杀一码</div><span class="num" id="kt">-</span></div>
@@ -195,8 +195,8 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
   </div>
 </div>
 <div class="table-wrap">
-  <h3>📅 每日预测跟踪 <span style="font-size:.65rem;color:#999">(开奖前记录 · 开奖后回填 · 真实样本外 · 两版独立)</span></h3>
-  <div class="win-tabs" id="trackTabs" style="margin:8px 10px 0"></div>
+  <h3>📅 每日预测跟踪 <span style="font-size:.65rem;color:#999">(开奖前记录 · 开奖后回填 · 真实样本外)</span></h3>
+  <div class="win-tabs" id="trackTabs" style="margin:8px 10px 0;display:none"></div>
   <div class="stats" id="trackStats" style="margin:8px 12px 6px"></div>
   <div class="scroll" style="max-height:360px">
     <table class="tbl">
@@ -205,7 +205,7 @@ body { background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Seg
     </table>
   </div>
   <div class="track-note">
-    记录规则：预测在<b>开奖前</b>落盘（第i期预测只用第i-1/i-2期），开奖后自动回填。<b>350期版与450期版各自独立统计</b>，累计真实命中率是唯一的样本外指标，与回测表(历史拟合)无关。
+    记录规则：预测在<b>开奖前</b>落盘（第i期预测只用第i-1/i-2期），开奖后自动回填。累计真实命中率是唯一的样本外指标，与回测表(历史拟合)无关。
   </div>
 </div>
 <div class="info">
@@ -272,7 +272,7 @@ function renderWin(w) {
     tbody.appendChild(tr);
   });
 }
-// 每日预测跟踪（两版独立：350期版 / 450期版 tab 切换）
+// 每日预测跟踪（450期版）
 var curTrack = null;
 function renderTrackTabs() {
   var tabs = document.getElementById('trackTabs');
