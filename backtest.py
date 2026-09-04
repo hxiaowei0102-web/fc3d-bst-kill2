@@ -74,7 +74,7 @@ def predict_next(csv_path, combo):
     fns = _compile(combo)
     prev = (hh[-2], tt[-2], oo[-2]) if len(issues) >= 2 else None
     return {
-        'next_issue': get_next_issue(latest),
+        'next_issue': get_next_issue(latest, issues),
         'last_issue': latest,
         'last_draw': [pb, ps, pg],
         'kh': fns['h'](pb, ps, pg, prev),
