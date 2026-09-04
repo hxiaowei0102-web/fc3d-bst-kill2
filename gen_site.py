@@ -5,6 +5,7 @@
 风格复刻 D:\\百十个杀一码\\index.html，加「200期/300期」窗口切换。
 """
 import json
+import sys
 import datetime
 from datetime import timezone, timedelta
 import backtest
@@ -53,22 +54,58 @@ def explain(formula):
     return ' + '.join(parts) + '，取个位( mod 10 )'
 
 
+def load_best_formula(path='best_formula.json'):
+    """读取公式库并容错（M2 加固）。
+
+    返回 (bf, err)：bf 为合法字典（可能为空 {}），err 为 None 或错误描述。
+    容错范围：文件缺失 / JSON 损坏 / windows 缺失 / windows 为空 / combo 缺 h|t|o 位。
+    """
+    err = None
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            bf = json.load(f)
+    except FileNotFoundError:
+        bf, err = {}, f'缺少 {path}：请先运行 auto_update.py 生成公式库'
+    except json.JSONDecodeError as e:
+        bf, err = {}, f'{path} JSON损坏({e})：文件可能写入不完整，请重跑 auto_update.py'
+    except Exception as e:
+        bf, err = {}, f'读取 {path} 失败: {e}'
+    # windows 结构校验：必须是非空 dict，且每个窗口 combo 含 h/t/o 三键
+    if err is None:
+        wins = bf.get('windows')
+        if not isinstance(wins, dict) or not wins:
+            err = f"{path} 缺少 windows 配置：文件写入不完整，请重跑 auto_update.py"
+            wins = {}
+        else:
+            bad = [w for w, win in wins.items()
+                   if not isinstance(win, dict) or not isinstance(win.get('combo'), dict)
+                   or any(k not in win['combo'] for k in ('h', 't', 'o'))]
+            if bad:
+                err = f"{path} 窗口 {bad} 缺少 combo 的 h/t/o：请重跑 auto_update.py"
+                wins = {w: v for w, v in wins.items() if w not in bad}  # 丢弃坏窗口，保留好窗口
+        bf['windows'] = wins
+    return bf, err
+
+
 def build_data():
     import tracking
-    with open('best_formula.json', 'r', encoding='utf-8') as f:
-        bf = json.load(f)
+    bf, formula_err = load_best_formula()
     issues, hh, tt, oo = load_data(CSV_PATH)
     latest = issues[-1]
     last_draw = ''.join(map(str, [hh[-1], tt[-1], oo[-1]]))
 
     # 每日预测跟踪：JSONL 真实样本外记录（胆码项目风格）
+    # 注：不在此处 backfill（gen_site 只读职责），回填由 auto_update 主流程负责
     track = tracking.summary()
 
     windows = {}
+    next_issue = None
     for wstr, win in bf['windows'].items():
         combo = win['combo']
         bt = backtest.run_backtest(CSV_PATH, combo, n=int(wstr))
         pred = backtest.predict_next(CSV_PATH, combo)
+        if next_issue is None:
+            next_issue = pred['next_issue']
         s = bt['summary']
         rows = [{
             'issue': r['issue'], 'draw': ''.join(map(str, r['draw'])),
@@ -89,13 +126,14 @@ def build_data():
 
     return {
         'data_info': {'n_issues': len(issues), 'first': issues[0], 'last': issues[-1]},
-        'next_issue': backtest.predict_next(CSV_PATH, list(bf['windows'].values())[0]['combo'])['next_issue'],
+        'next_issue': next_issue,
         'last_issue': latest,
         'last_draw': last_draw,
         'updated': datetime.datetime.now(BJT).strftime('%Y-%m-%d %H:%M'),
         'pool_size': bf.get('pool_size'),
         'windows': windows,
         'track': track,
+        'formula_err': formula_err,   # 页面提示"公式库缺失"而非白屏（M2）
     }
 
 
@@ -336,6 +374,12 @@ renderWin(Object.keys(P.windows)[0]);
 
 def main(out_path='index.html'):
     data = build_data()
+    if not data['windows']:
+        # 公式库缺失/损坏 → 拒绝生成空模板，提示重跑（M2 防"线上空模板"）
+        err = data.get('formula_err') or 'best_formula.json 无可用窗口'
+        msg = f"❌ 无法生成页面：{err}\n   请先运行 python auto_update.py 重建公式库"
+        print(msg, file=sys.stderr)
+        raise SystemExit(1)
     data_json = json.dumps(data, ensure_ascii=False)
     html = HTML_TEMPLATE.replace('__DATA__', data_json)
     with open(out_path, 'w', encoding='utf-8') as f:
