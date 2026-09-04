@@ -37,7 +37,20 @@ FILES = [
 
 
 def get_token():
-    r = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True)
+    """读取 gh CLI 的 OAuth token。未登录/未安装 gh 时给出明确指引（M3）。"""
+    try:
+        r = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True, timeout=15)
+    except FileNotFoundError:
+        print("❌ 未找到 gh 命令：请先安装 GitHub CLI (https://cli.github.com/)")
+        return ''
+    except Exception as e:
+        print(f"❌ 读取 gh token 失败: {e}")
+        return ''
+    if r.returncode != 0 or not r.stdout.strip():
+        # 明确指引：GitHub Actions 上要用 $GITHUB_TOKEN，本地手工才用 gh auth login
+        print("❌ 无法获取 GitHub token：请先运行  gh auth login  登录 GitHub 账号")
+        print("   (若在 GitHub Actions 中运行，请改用环境变量 GITHUB_TOKEN)")
+        return ''
     return r.stdout.strip()
 
 
@@ -118,7 +131,7 @@ def pull(files=FILES):
 def push(files=FILES):
     token = get_token()
     if not token:
-        print('未获取到 token'); sys.exit(1)
+        print('推送已中止（未取得 token，见上方指引）'); sys.exit(1)
     for path in files:
         if not os.path.exists(path):
             print(f"  ✗ {path}: 本地不存在, 跳过"); continue
@@ -131,6 +144,11 @@ def push(files=FILES):
 
 if __name__ == '__main__':
     mode = sys.argv[1] if len(sys.argv) > 1 else 'status'
+    if mode == 'token':
+        # 诊断：仅打印 token 状态（不泄露 token 本身）
+        tok = get_token()
+        print('✓ gh 已登录' if tok else '✗ gh 未登录/无 token')
+        sys.exit(0 if tok else 1)
     targets = sys.argv[2:] if len(sys.argv) > 2 else None
     files = targets if targets else FILES
     print(f"=== 同步模式: {mode} ({OWNER}/{REPO}) {'文件:' + ','.join(files) if targets else '(全部)'} ===")
@@ -141,4 +159,4 @@ if __name__ == '__main__':
     elif mode == 'push':
         push(files)
     else:
-        print("用法: python sync.py [status|pull|push] [文件1 文件2 ...]")
+        print("用法: python sync.py [status|pull|push|token] [文件1 文件2 ...]")
