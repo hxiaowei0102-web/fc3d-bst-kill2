@@ -26,18 +26,6 @@ def _parse_huiniao(data):
             for it in data['data']['data']['list']]
 
 
-def _parse_apihz(data):
-    if data.get('code') != 200:
-        return []
-    nums = str(data.get('number', '')).split('|')
-    if len(nums) != 3:
-        return []
-    try:
-        return [(data['qihao'], int(nums[0]), int(nums[1]), int(nums[2]), None)]
-    except (KeyError, ValueError):
-        return []
-
-
 def _parse_17500(raw):
     draws = []
     lines = [l for l in raw.strip().split('\n') if l.strip()]
@@ -81,7 +69,12 @@ def _parse_800820(raw):
     return draws
 
 
+# ============================================================
+# 数据源配置（L2: URL 集中在此，源改版只改这里，不动解析逻辑）
+#   新增源步骤: ①加解析函数 ②在 DATA_SOURCES 加一项 ③实测 url 可达
+# ============================================================
 DATA_SOURCES = [
+    # 官方源置首（权威、优先），其余按可靠性降级
     {'name': 'cwl', 'kind': 'json', 'referer': 'https://www.cwl.gov.cn/',
      'url': 'https://www.cwl.gov.cn/cwl_admin/front/cwlkj/search/kjxx/findDrawNotice?name=3d&issueCount=5',
      'parser': lambda d: [(it['code'], int(it['red'].split(',')[0]), int(it['red'].split(',')[1]),
