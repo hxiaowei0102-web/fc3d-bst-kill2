@@ -2,7 +2,7 @@
 """
 福彩3D 新版百十个杀一码 — 云端全自动更新入口（GitHub Actions 定时运行）
 =============================================
-流程：多源降级抓取最新开奖 → 追加到CSV → 双窗口(350/450期)暴力穷举选最优公式
+流程：多源降级抓取最新开奖 → 追加到CSV → 单窗口(450期)暴力穷举选最优公式
       → 每日预测跟踪(回填昨日/记录今日) → 回测 → 生成 static/index.html
 幂等设计：数据、公式、预测跟踪均无变化时**不重写页面**（含时间戳），
          workflow 的 git diff 检测不到任何变化即跳过提交与部署，零无效更新。
@@ -23,7 +23,7 @@ TRACK_PATH = 'data/predictions.jsonl'
 def main():
     t0 = time.time()
     print("=" * 50)
-    print("  福彩3D 百十个位各杀一码 · 云端全自动更新（双窗口350/450期 + 每日预测跟踪）")
+    print("  福彩3D 百十个位各杀一码 · 云端全自动更新（单窗口450期 + 每日预测跟踪）")
     print(f"  时间(北京): {datetime.now(BJT).strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 50)
 
@@ -35,7 +35,7 @@ def main():
     except Exception as e:
         print(f"  ⚠ 数据同步异常，沿用现有CSV: {str(e)[:80]}")
 
-    print("\n[2/5] 双窗口暴力穷举（向量化 单+双池27.6万，三位置独立选优）")
+    print("\n[2/5] 单窗口暴力穷举（向量化 单+双池27.6万，三位置独立选优）")
     import bruteforce_v2 as bruteforce   # v2 向量化：单窗口 137s→13s
     from engine import load_data
     issues, hh, tt, oo = load_data()
