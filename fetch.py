@@ -62,23 +62,39 @@ def _parse_html_3d(raw):
     return out
 
 
+def _parse_cz89(raw):
+    """彩尊(cz89.com)：'第<期号>期开奖结果' 后紧跟 <span class='ball'>X</span>×3"""
+    draws = []
+    # 匹配 "第2026237期开奖结果" ... 三个 ball span
+    for m in re.finditer(r'第(20\d{5})期开奖结果.*?<span class="ball">(\d)</span><span class="ball">(\d)</span><span class="ball">(\d)</span>', raw, re.S):
+        issue, b, s, g = m.group(1), int(m.group(2)), int(m.group(3)), int(m.group(4))
+        draws.append((issue, b, s, g, None))
+    return draws
+
+
+def _parse_800820(raw):
+    """800820.net：'期中奖号码：' 后 <div class='balls'><span>X</span>×3"""
+    draws = []
+    for m in re.finditer(r'(20\d{5})</option>\s*</select>期中奖号码：.*?<div class="balls">\s*<span>(\d)</span>\s*<span>(\d)</span>\s*<span>(\d)</span>', raw, re.S):
+        issue, b, s, g = m.group(1), int(m.group(2)), int(m.group(3)), int(m.group(4))
+        draws.append((issue, b, s, g, None))
+    return draws
+
+
 DATA_SOURCES = [
+    {'name': 'cwl', 'kind': 'json', 'referer': 'https://www.cwl.gov.cn/',
+     'url': 'https://www.cwl.gov.cn/cwl_admin/front/cwlkj/search/kjxx/findDrawNotice?name=3d&issueCount=5',
+     'parser': lambda d: [(it['code'], int(it['red'].split(',')[0]), int(it['red'].split(',')[1]),
+                           int(it['red'].split(',')[2]), None) for it in d.get('result', [])]},
     {'name': 'huiniao', 'kind': 'json',
      'url': 'https://api.huiniao.top/interface/home/lotteryHistory?type=fcsd&page=1&limit=5',
      'parser': _parse_huiniao},
     {'name': '17500', 'kind': 'txt17500',
      'url': 'http://www.17500.cn/getData/3d.TXT'},
-    {'name': 'apihz', 'kind': 'json',
-     'url': 'https://cn.apihz.cn/api/caipiao/fucai3d.php?id=88888888&key=88888888',
-     'parser': _parse_apihz},
-    {'name': 'cwl', 'kind': 'json', 'referer': 'https://www.cwl.gov.cn/',
-     'url': 'https://www.cwl.gov.cn/cwl_admin/front/cwlkj/search/kjxx/findDrawNotice?name=3d&issueCount=5',
-     'parser': lambda d: [(it['code'], int(it['red'].split(',')[0]), int(it['red'].split(',')[1]),
-                           int(it['red'].split(',')[2]), None) for it in d.get('result', [])]},
-    {'name': '55128', 'kind': 'html',
-     'url': 'https://www.55128.cn/zous/3d-5.htm'},
-    {'name': '8200', 'kind': 'html',
-     'url': 'https://3d.8200.cn/'},
+    {'name': 'cz89', 'kind': 'html',
+     'url': 'https://www.cz89.com/3d/', 'parser': _parse_cz89},
+    # 2026-09-04 源健康审计: apihz(演示key失效)/55128(404)/8200(502)/800820(balls与期号错位,JS动态) 均已下线
+    # 现有 4 源(cwl官网+huiniao+17500+cz89) 实测可用, 官方源cwl置首保权威
 ]
 
 
@@ -111,7 +127,10 @@ def fetch_latest():
     for src in DATA_SOURCES:
         try:
             raw = _http_get(src['url'], referer=src.get('referer'))
-            if src['kind'] == 'json':
+            if src['kind'] == 'html' and 'parser' in src:
+                # HTML 自定义解析器(cz89/800820): 直接吃 raw 文本
+                draws = src['parser'](raw)
+            elif src['kind'] == 'json':
                 draws = src['parser'](json.loads(raw))
             elif src['kind'] == 'txt17500':
                 draws = _parse_17500(raw)
