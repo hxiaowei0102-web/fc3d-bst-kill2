@@ -1,15 +1,15 @@
 {
   "pool_size": 276120,
   "data_info": {
-    "n_issues": 8756,
+    "n_issues": 8757,
     "first": "2002001",
-    "last": "2026248"
+    "last": "2026249"
   },
   "windows": {
     "450": {
       "combo": {
         "h": "1*s2+3*mxmd+4",
-        "t": "3*mn+5*sL+2",
+        "t": "1*S+1*d3+7",
         "o": "2*s2+1*gL+1"
       },
       "rates": {
